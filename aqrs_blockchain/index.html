@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QuantumBank - Post-Quantum Banking Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #1a1f3c;
+      --secondary: #0f3460;
+      --accent: #00d4ff;
+      --accent2: #7c3aed;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #e2e8f0;
+      --card: #16213e;
+      --muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Inter", sans-serif;
+      background: radial-gradient(circle at 10% 20%, rgba(0, 212, 255, 0.12), transparent 45%),
+        radial-gradient(circle at 90% 10%, rgba(124, 58, 237, 0.18), transparent 40%),
+        linear-gradient(135deg, #0f172a 0%, #10172c 35%, #111827 100%);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(transparent 96%, rgba(255, 255, 255, 0.03) 97%),
+        linear-gradient(90deg, transparent 96%, rgba(255, 255, 255, 0.03) 97%);
+      background-size: 80px 80px;
+      pointer-events: none;
+      opacity: 0.5;
+      z-index: 0;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 270px 1fr;
+      min-height: 100vh;
+      position: relative;
+      z-index: 1;
+    }
+
+    .sidebar {
+      background: rgba(10, 15, 30, 0.9);
+      backdrop-filter: blur(16px);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      padding: 28px 22px;
+      gap: 28px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .logo-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.8), rgba(124, 58, 237, 0.9));
+      display: grid;
+      place-items: center;
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.35);
+    }
+
+    .logo-icon span {
+      font-size: 22px;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .nav-link {
+      padding: 12px 14px;
+      border-radius: 12px;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.3s ease;
+      background: transparent;
+    }
+
+    .nav-link.active,
+    .nav-link:hover {
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.18), rgba(124, 58, 237, 0.18));
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      box-shadow: 0 0 18px rgba(0, 212, 255, 0.2);
+    }
+
+    .threat-widget {
+      margin-top: auto;
+      padding: 18px;
+      border-radius: 16px;
+      background: rgba(22, 33, 62, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .threat-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .threat-bar {
+      height: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .threat-bar span {
+      display: block;
+      height: 100%;
+      width: 67%;
+      background: linear-gradient(90deg, var(--warning), var(--danger));
+      animation: pulse 2.4s ease-in-out infinite;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+    }
+
+    .threat-value {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .content {
+      padding: 30px 40px 40px;
+    }
+
+    .panel {
+      display: none;
+      animation: fadeIn 0.6s ease forwards;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .panel-title {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    .card {
+      background: rgba(22, 33, 62, 0.85);
+      border-radius: 18px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 18px 40px rgba(3, 10, 28, 0.35);
+      animation: fadeInUp 0.8s ease forwards;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .stat-value {
+      font-size: 26px;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+
+    .dashboard-panels {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .blockchain-list,
+    .tx-feed {
+      max-height: 260px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-right: 6px;
+    }
+
+    .block-item {
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(15, 52, 96, 0.7);
+      border: 1px solid rgba(0, 212, 255, 0.15);
+      display: grid;
+      gap: 6px;
+      animation: slideInRight 0.6s ease;
+    }
+
+    .block-item small {
+      color: var(--muted);
+    }
+
+    .block-chain-arrow {
+      color: var(--accent);
+      font-size: 18px;
+      margin-left: auto;
+    }
+
+    .tx-row {
+      display: grid;
+      grid-template-columns: 1.6fr 0.8fr 0.6fr 0.6fr 0.6fr;
+      gap: 10px;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.65);
+      border-radius: 12px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      animation: slideInTop 0.5s ease;
+    }
+
+    .badge {
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      letter-spacing: 0.4px;
+    }
+
+    .badge.low { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+    .badge.medium { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+    .badge.high { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    .badge.accent { background: rgba(0, 212, 255, 0.2); color: var(--accent); }
+    .badge.purple { background: rgba(124, 58, 237, 0.2); color: var(--accent2); }
+
+    .bar-chart {
+      display: grid;
+      gap: 10px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 80px 1fr 60px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .bar-track {
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: inherit;
+      transform: scaleX(0);
+      transform-origin: left;
+      animation: fillBar 1.4s ease forwards;
+    }
+
+    .layout-two {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+    }
+
+    .form-group {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    input, textarea, select {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+      transition: border 0.3s ease;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+    }
+
+    .radio-group {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .btn {
+      border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #0b1020;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(0, 212, 255, 0.2);
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid rgba(0, 0, 0, 0.2);
+      border-top-color: #0b1020;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .decision-step {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 14px;
+      position: relative;
+      padding-bottom: 14px;
+    }
+
+    .decision-step::after {
+      content: "";
+      position: absolute;
+      left: 15px;
+      top: 32px;
+      height: calc(100% - 32px);
+      width: 2px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .decision-step:last-child::after {
+      display: none;
+    }
+
+    .step-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(0, 212, 255, 0.2);
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .step-content h4 {
+      margin-bottom: 6px;
+    }
+
+    .mono {
+      font-family: "Fira Code", monospace;
+      font-size: 12px;
+    }
+
+    .status-line {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .status-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.08);
+      font-size: 12px;
+    }
+
+    .progress {
+      height: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--success), var(--accent));
+      transition: width 0.4s ease;
+    }
+
+    .table-controls {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .filter-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .filter-buttons button {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .filter-buttons button.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    th.sortable {
+      cursor: pointer;
+      color: var(--accent);
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 8, 20, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 50;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--card);
+      border-radius: 18px;
+      padding: 24px;
+      max-width: 700px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 18px;
+      cursor: pointer;
+      float: right;
+    }
+
+    .lab-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .banner {
+      position: absolute;
+      top: 14px;
+      right: -30px;
+      transform: rotate(20deg);
+      background: var(--danger);
+      color: #fff;
+      padding: 6px 28px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .banner.safe {
+      background: var(--success);
+    }
+
+    .score-bars {
+      display: grid;
+      gap: 10px;
+    }
+
+    .score-row {
+      display: grid;
+      grid-template-columns: 70px 1fr 60px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .score-track {
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .score-fill {
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(0, 212, 255, 0.7), rgba(124, 58, 237, 0.8));
+      transition: width 1.2s ease;
+    }
+
+    .attack-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .attack-card {
+      border-radius: 16px;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(15, 23, 42, 0.7);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .attack-card.compromised {
+      box-shadow: 0 0 24px rgba(239, 68, 68, 0.6);
+      animation: shake 0.4s ease;
+    }
+
+    .attack-card.safe {
+      box-shadow: 0 0 24px rgba(16, 185, 129, 0.6);
+    }
+
+    .progress-attack {
+      height: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-attack span {
+      display: block;
+      height: 100%;
+      width: 0;
+      transition: width 3s ease;
+      background: linear-gradient(90deg, var(--danger), var(--warning));
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(15, 23, 42, 0.95);
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: none;
+      z-index: 60;
+    }
+
+    .toast.success { border-color: rgba(16, 185, 129, 0.6); color: var(--success); }
+    .toast.error { border-color: rgba(239, 68, 68, 0.6); color: var(--danger); }
+
+    .hex-box {
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 12px;
+      padding: 12px;
+      font-family: "Fira Code", monospace;
+      font-size: 12px;
+      max-height: 120px;
+      overflow: auto;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .fade-section {
+      animation: fadeInUp 0.8s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideInTop {
+      from { opacity: 0; transform: translateY(-12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(16px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes fillBar {
+      to { transform: scaleX(1); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scaleX(0.9); opacity: 0.7; }
+      50% { transform: scaleX(1); opacity: 1; }
+    }
+
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-3px); }
+      50% { transform: translateX(3px); }
+      75% { transform: translateX(-2px); }
+      100% { transform: translateX(0); }
+    }
+
+    @media (max-width: 1100px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { flex-direction: row; overflow-x: auto; }
+      .content { padding: 24px; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .dashboard-panels, .layout-two, .comparison-grid, .attack-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo">
+        <div class="logo-icon"><span>🛡️</span></div>
+        QuantumBank
+      </div>
+      <nav class="nav-links">
+        <a class="nav-link active" href="#" data-panel="dashboard">📊 Dashboard</a>
+        <a class="nav-link" href="#" data-panel="transaction">✍️ New Transaction</a>
+        <a class="nav-link" href="#" data-panel="history">📜 Transaction History</a>
+        <a class="nav-link" href="#" data-panel="lab">🧪 Security Lab</a>
+        <a class="nav-link" href="#" data-panel="threat">⚠️ Quantum Threat Demo</a>
+      </nav>
+      <div class="threat-widget">
+        <div class="threat-title">Quantum Computing Progress</div>
+        <div class="threat-bar"><span></span></div>
+        <div class="threat-value">~67% to Cryptographic Relevance</div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section id="dashboard" class="panel active">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">QuantumBank Overview</div>
+            <div class="subtitle">Post-quantum adaptive security in real time</div>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="card">
+            <div class="stat-label">Total Transactions</div>
+            <div class="stat-value" id="stat-transactions">0</div>
+          </div>
+          <div class="card">
+            <div class="stat-label">Blockchain Blocks</div>
+            <div class="stat-value" id="stat-blocks">0</div>
+          </div>
+          <div class="card">
+            <div class="stat-label">Security Mode</div>
+            <div class="stat-value">AQRS Adaptive</div>
+          </div>
+          <div class="card">
+            <div class="stat-label">Quantum Safety Score</div>
+            <div class="stat-value" id="stat-safety">0%</div>
+          </div>
+        </div>
+
+        <div class="dashboard-panels">
+          <div class="card">
+            <div class="panel-title" style="font-size: 18px; margin-bottom: 12px;">Live Blockchain</div>
+            <div class="blockchain-list" id="blockchain-list"></div>
+          </div>
+          <div class="card">
+            <div class="panel-title" style="font-size: 18px; margin-bottom: 12px;">Recent Transactions Feed</div>
+            <div class="tx-feed" id="tx-feed"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="panel-title" style="font-size: 18px; margin-bottom: 12px;">Signing Time Comparison</div>
+          <div class="bar-chart" id="signing-chart"></div>
+        </div>
+      </section>
+
+      <section id="transaction" class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">New Transaction</div>
+            <div class="subtitle">Adaptive Quantum Risk Scoring (AQRS) in action</div>
+          </div>
+        </div>
+        <div class="layout-two">
+          <div class="card">
+            <div class="form-group">
+              <label>Sender Name</label>
+              <input type="text" id="sender" value="Alice" />
+            </div>
+            <div class="form-group">
+              <label>Receiver Name</label>
+              <input type="text" id="receiver" value="Bob" />
+            </div>
+            <div class="form-group">
+              <label>Amount (INR)</label>
+              <input type="number" id="amount" value="" placeholder="₹0" min="0" />
+            </div>
+            <div class="form-group">
+              <label>Risk Classification</label>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <span class="badge low" id="risk-badge">LOW</span>
+                <span class="badge accent" id="level-badge">DIL-2</span>
+              </div>
+              <div class="subtitle" id="risk-explain">Enter an amount to classify risk.</div>
+            </div>
+            <div class="form-group">
+              <label>Security Strength Meter</label>
+              <div class="progress"><span id="strength-meter"></span></div>
+            </div>
+            <div class="form-group">
+              <label>Security Mode</label>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="mode" value="aqrs" checked /> AQRS Adaptive (recommended)</label>
+                <label class="radio-option"><input type="radio" name="mode" value="ecdsa" /> Fixed ECDSA (classical)</label>
+                <label class="radio-option"><input type="radio" name="mode" value="dil2" /> Fixed Dilithium Level 2</label>
+                <label class="radio-option"><input type="radio" name="mode" value="dil3" /> Fixed Dilithium Level 3</label>
+                <label class="radio-option"><input type="radio" name="mode" value="dil5" /> Fixed Dilithium Level 5</label>
+              </div>
+            </div>
+            <button class="btn" id="submit-btn" disabled>
+              <span>Sign &amp; Send Transaction</span>
+              <span class="spinner" id="submit-spinner" style="display: none;"></span>
+            </button>
+          </div>
+          <div class="card">
+            <div class="panel-title" style="font-size: 18px; margin-bottom: 12px;">🧠 AQRS Decision Engine</div>
+            <div id="decision-steps"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="history" class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Transaction History</div>
+            <div class="subtitle">Full audit trail for this session</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-controls">
+            <div class="filter-buttons">
+              <button class="active" data-filter="ALL">All</button>
+              <button data-filter="LOW">LOW</button>
+              <button data-filter="MEDIUM">MEDIUM</button>
+              <button data-filter="HIGH">HIGH</button>
+            </div>
+            <input type="text" id="search-input" placeholder="Search sender/receiver" />
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>TX ID</th>
+                <th>Time</th>
+                <th>Sender</th>
+                <th>Receiver</th>
+                <th class="sortable" data-sort="amount">Amount</th>
+                <th>Risk</th>
+                <th>Security Mode</th>
+                <th class="sortable" data-sort="sign">Sign Time</th>
+                <th>Verify Time</th>
+                <th>Sig Size</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="history-table"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="lab" class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Security Lab</div>
+            <div class="subtitle">Algorithm comparisons and live signature inspection</div>
+          </div>
+        </div>
+        <div class="lab-grid">
+          <div class="card">
+            <div class="panel-title" style="font-size: 18px; margin-bottom: 12px;">Algorithm Comparison</div>
+            <div class="comparison-grid">
+              <div class="card" style="position: relative;">
+                <div class="banner">VULNERABLE</div>
+                <h3>ECDSA</h3>
+                <p class="subtitle">Classical elliptic curve signatures</p>
+                <div style="margin-top: 12px; display: grid; gap: 6px; font-size: 13px;">
+                  <div>Key size: 32 bytes private, 64 bytes public</div>
+                  <div>Signature size: ~71 bytes</div>
+                  <div>Based on: Elliptic Curve Discrete Logarithm</div>
+                  <div>Quantum safe: ✗ NO — Broken by Shor's Algorithm</div>
+                  <div>Speed: ⚡ Very Fast (0.8ms)</div>
+                </div>
+              </div>
+              <div class="card" style="position: relative;">
+                <div class="banner safe">QUANTUM SAFE</div>
+                <h3>Dilithium</h3>
+                <p class="subtitle">NIST FIPS 204 Post-Quantum Signatures</p>
+                <div style="margin-top: 12px; display: grid; gap: 6px; font-size: 13px;">
+                  <div>Key sizes: <span id="dil-key">Level 3 ≈ 1952 bytes</span></div>
+                  <div>Signature size: <span id="dil-sig">~3293 bytes</span></div>
+                  <div>Based on: Module Learning With Errors (MLWE)</div>
+                  <div>Quantum safe: ✓ YES — NIST FIPS 204 Standard</div>
+                  <div>Speed: Varies by level</div>
+                </div>
+                <div class="radio-group" style="margin-top: 12px;">
+                  <label class="radio-option"><input type="radio" name="dil-toggle" value="2" /> Level 2</label>
+                  <label class="radio-option"><input type="radio" name="dil-toggle" value="3" checked /> Level 3</label>
+                  <label class="radio-option"><input type="radio" name="dil-toggle" value="5" /> Level 5</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="panel-title" style="font-size: 18px; margin-bottom: 12px;">AQRS Score Visualization</div>
+            <div class="score-bars" id="aqrs-bars"></div>
+          </div>
+
+          <div class="card">
+            <div class="panel-title" style="font-size: 18px; margin-bottom: 12px;">Live Signature Inspector</div>
+            <div class="form-group">
+              <label>Message</label>
+              <textarea id="message-input" rows="4" placeholder="Paste or type any message..."></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button class="btn" id="sign-ecdsa">Sign with ECDSA</button>
+              <button class="btn" id="sign-dil">Sign with Dilithium (AQRS)</button>
+              <button class="btn" id="verify-signature" style="background: linear-gradient(135deg, var(--success), var(--accent));">Verify</button>
+            </div>
+            <div style="margin-top: 16px; display: grid; gap: 10px;">
+              <div class="hex-box" id="signature-box">Signature appears here...</div>
+              <div class="hex-box" id="key-box">Public key appears here...</div>
+              <div class="status-line" id="signature-meta">Awaiting signature</div>
+              <div class="status-line" id="verify-result">Verification: Pending</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="threat" class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Quantum Threat Demo</div>
+            <div class="subtitle">Visual simulation of quantum attacks vs post-quantum defense</div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom: 16px;">
+          <p>A quantum adversary intercepts a blockchain transaction signed with ECDSA and attempts to recover the private key using Shor's Algorithm. Watch what happens.</p>
+        </div>
+        <div class="attack-grid">
+          <div class="attack-card" id="attack-ecdsa">
+            <h3>ECDSA Transaction (Classical)</h3>
+            <div class="hex-box" style="margin: 10px 0;">0x4adf...c31e9a (signature)</div>
+            <button class="btn" id="launch-ecdsa" style="background: linear-gradient(135deg, var(--danger), var(--warning));">Launch Quantum Attack</button>
+            <div class="subtitle" style="margin-top: 12px;">Shor's Algorithm Running...</div>
+            <div class="progress-attack" style="margin-top: 8px;"><span id="ecdsa-progress"></span></div>
+            <div class="subtitle" id="ecdsa-result" style="margin-top: 12px;"></div>
+          </div>
+          <div class="attack-card" id="attack-dil">
+            <h3>Dilithium Transaction (Post-Quantum)</h3>
+            <div class="hex-box" style="margin: 10px 0;">0x8df2...b719aa (signature)</div>
+            <button class="btn" id="launch-dil">Launch Quantum Attack</button>
+            <div class="subtitle" style="margin-top: 12px;">Shor's Algorithm Running...</div>
+            <div class="progress-attack" style="margin-top: 8px;"><span id="dil-progress"></span></div>
+            <div class="subtitle" id="dil-result" style="margin-top: 12px;"></div>
+          </div>
+        </div>
+        <div class="dashboard-panels" style="margin-top: 18px;">
+          <div class="card">
+            <h4>Shor's Algorithm</h4>
+            <p class="subtitle" style="margin-top: 6px;">Breaks: RSA, ECDSA, Diffie-Hellman</p>
+            <p class="subtitle">Cannot Break: Lattice-based problems (MLWE, MSIS)</p>
+          </div>
+          <div class="card">
+            <h4>Grover's Algorithm</h4>
+            <p class="subtitle" style="margin-top: 6px;">Weakens: Symmetric encryption and hash functions by 50%</p>
+            <p class="subtitle">Impact on Dilithium: Security levels already account for this</p>
+          </div>
+          <div class="card">
+            <h4>NIST Response</h4>
+            <p class="subtitle" style="margin-top: 6px;">FIPS 204 (Dilithium) finalized August 2024</p>
+            <p class="subtitle">Mandatory migration recommended by 2035</p>
+            <p class="subtitle">Your blockchain: Already quantum-ready ✓</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal" id="detail-modal">
+    <div class="modal-content">
+      <button class="close-btn" id="close-modal">✕</button>
+      <h3>Transaction Details</h3>
+      <div id="modal-content" style="margin-top: 12px;"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const state = {
+      transactions: [],
+      blocks: [],
+      filter: "ALL",
+      search: "",
+      sort: { key: "time", direction: "desc" },
+      signatureCache: null,
+    };
+
+    const elements = {
+      statTransactions: document.getElementById("stat-transactions"),
+      statBlocks: document.getElementById("stat-blocks"),
+      statSafety: document.getElementById("stat-safety"),
+      blockchainList: document.getElementById("blockchain-list"),
+      txFeed: document.getElementById("tx-feed"),
+      signingChart: document.getElementById("signing-chart"),
+      riskBadge: document.getElementById("risk-badge"),
+      levelBadge: document.getElementById("level-badge"),
+      riskExplain: document.getElementById("risk-explain"),
+      strengthMeter: document.getElementById("strength-meter"),
+      amountInput: document.getElementById("amount"),
+      senderInput: document.getElementById("sender"),
+      receiverInput: document.getElementById("receiver"),
+      submitBtn: document.getElementById("submit-btn"),
+      submitSpinner: document.getElementById("submit-spinner"),
+      decisionSteps: document.getElementById("decision-steps"),
+      historyTable: document.getElementById("history-table"),
+      searchInput: document.getElementById("search-input"),
+      modal: document.getElementById("detail-modal"),
+      modalContent: document.getElementById("modal-content"),
+      toast: document.getElementById("toast"),
+      dilKey: document.getElementById("dil-key"),
+      dilSig: document.getElementById("dil-sig"),
+      aqrsBars: document.getElementById("aqrs-bars"),
+      signatureBox: document.getElementById("signature-box"),
+      keyBox: document.getElementById("key-box"),
+      signatureMeta: document.getElementById("signature-meta"),
+      verifyResult: document.getElementById("verify-result"),
+    };
+
+    const modeLabels = {
+      aqrs: "AQRS",
+      ecdsa: "ECDSA",
+      dil2: "DIL-2",
+      dil3: "DIL-3",
+      dil5: "DIL-5",
+    };
+
+    const riskLevels = [
+      { level: "LOW", min: 0, max: 999, color: "low", dil: 2, meter: 35 },
+      { level: "MEDIUM", min: 1000, max: 99999, color: "medium", dil: 3, meter: 65 },
+      { level: "HIGH", min: 100000, max: Infinity, color: "high", dil: 5, meter: 90 },
+    ];
+
+    const fakeTransactions = [
+      { sender: "Ava", receiver: "Noah", amount: 620, risk_level: "LOW", mode: "aqrs", dilithium_level: 2, signing_time_ms: 34.3, verification_time_ms: 8.3, signature_size_bytes: 2420, signature_hex: "b94f1a2e".padEnd(64, "f"), public_key_hex: "a1c3".padEnd(64, "7"), is_valid: true, block_number: 1, timestamp: new Date().toISOString(), aqrs_score: 0.0344 },
+      { sender: "Zara", receiver: "Leo", amount: 52341, risk_level: "MEDIUM", mode: "aqrs", dilithium_level: 3, signing_time_ms: 77.1, verification_time_ms: 12.7, signature_size_bytes: 3293, signature_hex: "f48a2c".padEnd(64, "a"), public_key_hex: "91ab".padEnd(64, "2"), is_valid: true, block_number: 1, timestamp: new Date().toISOString(), aqrs_score: 0.0275 },
+      { sender: "Ishan", receiver: "Maya", amount: 242300, risk_level: "HIGH", mode: "aqrs", dilithium_level: 5, signing_time_ms: 80.0, verification_time_ms: 15.1, signature_size_bytes: 4595, signature_hex: "d7afbc".padEnd(64, "c"), public_key_hex: "7b9f".padEnd(64, "3"), is_valid: true, block_number: null, timestamp: new Date().toISOString(), aqrs_score: 0.0308 },
+    ];
+
+    function formatAmount(amount) {
+      return `₹${amount.toLocaleString("en-IN")}`;
+    }
+
+    function truncateHex(value) {
+      if (!value) return "";
+      return value.length > 64 ? `${value.slice(0, 64)}...` : value;
+    }
+
+    function typeHex(element, hex) {
+      const target = truncateHex(hex);
+      element.textContent = "";
+      let index = 0;
+      const interval = setInterval(() => {
+        element.textContent += target[index];
+        index += 1;
+        if (index >= target.length) clearInterval(interval);
+      }, 12);
+    }
+
+    function updateStats() {
+      elements.statTransactions.textContent = state.transactions.length;
+      elements.statBlocks.textContent = state.blocks.length;
+    }
+
+    function animateSafetyScore() {
+      let current = 0;
+      const target = 94;
+      const interval = setInterval(() => {
+        current += 2;
+        elements.statSafety.textContent = `${Math.min(current, target)}%`;
+        if (current >= target) clearInterval(interval);
+      }, 30);
+    }
+
+    function renderBlocks() {
+      elements.blockchainList.innerHTML = "";
+      const blocks = state.blocks.slice(-5).reverse();
+      if (!blocks.length) {
+        elements.blockchainList.innerHTML = "<div class=\"subtitle\">Awaiting block creation...</div>";
+        return;
+      }
+      blocks.forEach((block) => {
+        const div = document.createElement("div");
+        div.className = "block-item";
+        div.innerHTML = `
+          <strong>Block #${block.block_number}</strong>
+          <small>${block.transaction_count} transactions</small>
+          <small>${truncateHex(block.hash)}</small>
+          <small>${new Date(block.timestamp).toLocaleTimeString()}</small>
+          <div class=\"block-chain-arrow\">→</div>
+        `;
+        elements.blockchainList.appendChild(div);
+      });
+    }
+
+    function renderFeed() {
+      elements.txFeed.innerHTML = "";
+      const list = state.transactions.slice(-8).reverse();
+      list.forEach((tx) => {
+        const row = document.createElement("div");
+        row.className = "tx-row";
+        row.innerHTML = `
+          <div>${tx.sender} → ${tx.receiver}</div>
+          <div>${formatAmount(tx.amount)}</div>
+          <div class=\"badge ${tx.risk_level.toLowerCase()}\">${tx.risk_level}</div>
+          <div class=\"badge purple\">${modeLabels[tx.mode] || "DIL"}</div>
+          <div class=\"badge low\">✓ Verified</div>
+        `;
+        elements.txFeed.appendChild(row);
+      });
+    }
+
+    function renderSigningChart() {
+      const items = [
+        { label: "ECDSA", value: 0.8, color: "#ef4444" },
+        { label: "DIL-2", value: 34.3, color: "#10b981" },
+        { label: "DIL-3", value: 77.1, color: "#f59e0b" },
+        { label: "DIL-5", value: 80.0, color: "#ef4444" },
+        { label: "AQRS", value: 48.3, color: "#00d4ff" },
+      ];
+      const max = Math.max(...items.map((item) => item.value));
+      elements.signingChart.innerHTML = "";
+      items.forEach((item, index) => {
+        const row = document.createElement("div");
+        row.className = "bar-row";
+        row.innerHTML = `
+          <div>${item.label}</div>
+          <div class=\"bar-track\"><div class=\"bar-fill\" style=\"width:${(item.value / max) * 100}%; background:${item.color}; animation-delay:${index * 0.1}s;\"></div></div>
+          <div>${item.value}ms</div>
+        `;
+        elements.signingChart.appendChild(row);
+      });
+    }
+
+    function renderDecisionEngine(txPreview, signingStatus, verificationStatus) {
+      const steps = [
+        {
+          title: "Transaction Received",
+          detail: txPreview
+            ? `${txPreview.amount ? formatAmount(txPreview.amount) : "--"} • ${txPreview.sender || "--"} → ${txPreview.receiver || "--"}`
+            : "Awaiting input",
+          status: txPreview && txPreview.amount > 0 ? "✓ Complete" : "⏳ Pending",
+        },
+        {
+          title: "Risk Classification",
+          detail: txPreview
+            ? `Amount ${formatAmount(txPreview.amount)} falls in ${txPreview.risk_level} tier (${txPreview.range})`
+            : "Pending",
+          status: txPreview && txPreview.amount > 0 ? txPreview.risk_level : "⏳ Pending",
+        },
+        {
+          title: "Security Level Selection",
+          detail: txPreview
+            ? `AQRS Selector assigns → Dilithium Level ${txPreview.dil}`
+            : "Pending",
+          status: txPreview ? `Selected DIL-${txPreview.dil}` : "⏳ Pending",
+          levels: txPreview ? txPreview.dil : 2,
+        },
+        {
+          title: "Cryptographic Signing",
+          detail: signingStatus || "Pending...",
+          status: signingStatus ? "✓ Signed" : "⏳ Pending",
+        },
+        {
+          title: "Verification & Block Addition",
+          detail: verificationStatus || "Pending...",
+          status: verificationStatus ? "✓ Verified" : "⏳ Pending",
+        },
+      ];
+
+      elements.decisionSteps.innerHTML = "";
+      steps.forEach((step, index) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "decision-step";
+        wrapper.innerHTML = `
+          <div class=\"step-circle\">${index + 1}</div>
+          <div class=\"step-content\">
+            <h4>${step.title}</h4>
+            <div class=\"subtitle\">${step.detail}</div>
+            <div class=\"status-line\">
+              <span class=\"status-icon\">${step.status.startsWith("✓") ? "✓" : "⏳"}</span>
+              <span>${step.status}</span>
+            </div>
+            ${step.levels ? `
+              <div style=\"margin-top: 8px; display: flex; gap: 8px;\">
+                <span class=\"badge ${step.levels === 2 ? "low" : "accent"}\">DIL-2: 128-bit</span>
+                <span class=\"badge ${step.levels === 3 ? "medium" : "accent"}\">DIL-3: 192-bit ${step.levels === 3 ? "✓" : ""}</span>
+                <span class=\"badge ${step.levels === 5 ? "high" : "accent"}\">DIL-5: 256-bit ${step.levels === 5 ? "✓" : ""}</span>
+              </div>
+            ` : ""}
+          </div>
+        `;
+        elements.decisionSteps.appendChild(wrapper);
+      });
+    }
+
+    function renderHistory() {
+      let list = [...state.transactions];
+      if (state.filter !== "ALL") {
+        list = list.filter((tx) => tx.risk_level === state.filter);
+      }
+      if (state.search) {
+        const term = state.search.toLowerCase();
+        list = list.filter((tx) => tx.sender.toLowerCase().includes(term) || tx.receiver.toLowerCase().includes(term));
+      }
+      if (state.sort.key === "amount") {
+        list.sort((a, b) => (state.sort.direction === "asc" ? a.amount - b.amount : b.amount - a.amount));
+      }
+      if (state.sort.key === "sign") {
+        list.sort((a, b) => (state.sort.direction === "asc" ? a.signing_time_ms - b.signing_time_ms : b.signing_time_ms - a.signing_time_ms));
+      }
+
+      elements.historyTable.innerHTML = "";
+      list.forEach((tx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${tx.transaction_id}</td>
+          <td>${new Date(tx.timestamp).toLocaleTimeString()}</td>
+          <td>${tx.sender}</td>
+          <td>${tx.receiver}</td>
+          <td>${formatAmount(tx.amount)}</td>
+          <td><span class=\"badge ${tx.risk_level.toLowerCase()}\">${tx.risk_level}</span></td>
+          <td>${modeLabels[tx.mode] || "DIL"}</td>
+          <td>${tx.signing_time_ms}ms</td>
+          <td>${tx.verification_time_ms}ms</td>
+          <td>${tx.signature_size_bytes}B</td>
+          <td>${tx.is_valid ? "✓ Verified" : "✗ Invalid"}</td>
+          <td><button class=\"btn\" data-tx="${tx.transaction_id}" style=\"padding: 6px 10px; font-size: 12px;\">View Details</button></td>
+        `;
+        elements.historyTable.appendChild(tr);
+      });
+    }
+
+    function renderAqrsBars() {
+      const rows = [
+        { label: "ECDSA", value: 1.0 },
+        { label: "DIL-2", value: 0.0344 },
+        { label: "DIL-3", value: 0.0275 },
+        { label: "DIL-5", value: 0.0308 },
+        { label: "AQRS", value: 0.035 },
+      ];
+      elements.aqrsBars.innerHTML = "";
+      rows.forEach((row) => {
+        const item = document.createElement("div");
+        item.className = "score-row";
+        item.innerHTML = `
+          <div>${row.label}</div>
+          <div class=\"score-track\"><div class=\"score-fill\" style=\"width:${Math.min(row.value * 100, 100)}%\"></div></div>
+          <div>${row.value.toFixed(4)} ${row.label === "AQRS" ? "★" : ""}</div>
+        `;
+        elements.aqrsBars.appendChild(item);
+        requestAnimationFrame(() => {
+          const fill = item.querySelector(".score-fill");
+          if (fill) fill.style.width = `${Math.min(row.value * 100, 100)}%`;
+        });
+      });
+    }
+
+    function updateRiskDisplay(amount) {
+      const amountValue = Number(amount) || 0;
+      const level = riskLevels.find((r) => amountValue >= r.min && amountValue <= r.max);
+      const selected = level || riskLevels[0];
+
+      elements.riskBadge.textContent = selected.level;
+      elements.riskBadge.className = `badge ${selected.color}`;
+      elements.levelBadge.textContent = `DIL-${selected.dil}`;
+      elements.levelBadge.className = `badge ${selected.color}`;
+      elements.riskExplain.textContent = amountValue
+        ? `Amount ${formatAmount(amountValue)} falls in ${selected.level} tier (₹${selected.min.toLocaleString()}–₹${selected.max === Infinity ? "∞" : selected.max.toLocaleString()}).`
+        : "Enter an amount to classify risk.";
+      elements.strengthMeter.style.width = `${selected.meter}%`;
+
+      return {
+        amount: amountValue,
+        risk_level: selected.level,
+        dil: selected.dil,
+        range: `₹${selected.min.toLocaleString()}–₹${selected.max === Infinity ? "∞" : selected.max.toLocaleString()}`,
+        sender: elements.senderInput.value,
+        receiver: elements.receiverInput.value,
+      };
+    }
+
+    function setLoading(isLoading) {
+      elements.submitBtn.disabled = isLoading || !(Number(elements.amountInput.value) > 0);
+      elements.submitSpinner.style.display = isLoading ? "inline-block" : "none";
+    }
+
+    function showToast(message, type = "success") {
+      elements.toast.textContent = message;
+      elements.toast.className = `toast ${type}`;
+      elements.toast.style.display = "block";
+      setTimeout(() => {
+        elements.toast.style.display = "none";
+      }, 3200);
+    }
+
+    function updateModal(tx) {
+      if (!tx) return;
+      elements.modalContent.innerHTML = `
+        <div style=\"display: grid; gap: 6px;\">
+          <div><strong>Transaction ID:</strong> ${tx.transaction_id}</div>
+          <div><strong>Sender:</strong> ${tx.sender}</div>
+          <div><strong>Receiver:</strong> ${tx.receiver}</div>
+          <div><strong>Amount:</strong> ${formatAmount(tx.amount)}</div>
+          <div><strong>Risk:</strong> ${tx.risk_level}</div>
+          <div><strong>Security Mode:</strong> ${modeLabels[tx.mode]}</div>
+          <div><strong>Signing Time:</strong> ${tx.signing_time_ms}ms</div>
+          <div><strong>Verification Time:</strong> ${tx.verification_time_ms}ms</div>
+          <div><strong>Signature Size:</strong> ${tx.signature_size_bytes} bytes</div>
+          <div><strong>Block Number:</strong> ${tx.block_number || "Pending"}</div>
+          <div><strong>AQRS Score:</strong> ${tx.aqrs_score}</div>
+          <div><strong>Public Key:</strong></div>
+          <div class=\"hex-box\">${tx.public_key_hex}</div>
+          <div><strong>Signature:</strong></div>
+          <div class=\"hex-box\">${tx.signature_hex}</div>
+          <div style=\"color: var(--success); margin-top: 6px;\">✓ Verification successful</div>
+        </div>
+      `;
+    }
+
+    async function submitTransaction() {
+      const amountValue = Number(elements.amountInput.value) || 0;
+      if (!amountValue) return;
+      const mode = document.querySelector("input[name=mode]:checked").value;
+      const preview = updateRiskDisplay(amountValue);
+      renderDecisionEngine(preview, "Signing in progress...", "Pending...");
+      setLoading(true);
+
+      try {
+        const response = await fetch("/api/transaction", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sender: elements.senderInput.value,
+            receiver: elements.receiverInput.value,
+            amount: amountValue,
+            mode,
+          }),
+        });
+        if (!response.ok) throw new Error("Failed to sign transaction");
+        const data = await response.json();
+        state.transactions.push(data);
+        if (data.block_number) {
+          const block = {
+            block_number: data.block_number,
+            transaction_count: 5,
+            hash: data.signature_hex + data.public_key_hex,
+            timestamp: data.timestamp,
+          };
+          state.blocks.push(block);
+        }
+        updateStats();
+        renderBlocks();
+        renderFeed();
+        renderHistory();
+        renderDecisionEngine(preview, `Signed in ${data.signing_time_ms}ms`, `Verified in ${data.verification_time_ms}ms | Block #${data.block_number || "pending"}`);
+        showToast(`Transaction ${data.transaction_id} signed with ${data.dilithium_level ? `Dilithium Level ${data.dilithium_level}` : "ECDSA"} in ${data.signing_time_ms}ms`, "success");
+      } catch (error) {
+        showToast("Unable to sign transaction. Backend offline?", "error");
+        renderDecisionEngine(preview, "Signing failed", "Pending...");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function signMessage(mode) {
+      const message = document.getElementById("message-input").value || "QuantumBank demo";
+      elements.signatureMeta.textContent = "Signing...";
+      try {
+        const response = await fetch("/api/sign-message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, mode }),
+        });
+        const data = await response.json();
+        state.signatureCache = { ...data, mode, message };
+        typeHex(elements.signatureBox, data.signature_hex);
+        typeHex(elements.keyBox, data.public_key_hex);
+        elements.signatureMeta.textContent = `Signed in ${data.signing_time_ms}ms | Signature size ${data.signature_size_bytes} bytes`;
+        elements.verifyResult.textContent = "Verification: Pending";
+      } catch (error) {
+        elements.signatureMeta.textContent = "Signing failed";
+      }
+    }
+
+    async function verifyMessage() {
+      if (!state.signatureCache) return;
+      elements.verifyResult.textContent = "Verification running...";
+      try {
+        const response = await fetch("/api/verify-message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: state.signatureCache.message,
+            signature_hex: state.signatureCache.signature_hex,
+            public_key_hex: state.signatureCache.public_key_hex,
+            mode: state.signatureCache.mode === "ecdsa" ? "ecdsa" : "dilithium",
+          }),
+        });
+        const data = await response.json();
+        elements.verifyResult.textContent = data.is_valid ? "Verification: ✓ Valid" : "Verification: ✗ Invalid";
+      } catch (error) {
+        elements.verifyResult.textContent = "Verification failed";
+      }
+    }
+
+    function initNavigation() {
+      document.querySelectorAll(".nav-link").forEach((link) => {
+        link.addEventListener("click", (event) => {
+          event.preventDefault();
+          document.querySelectorAll(".nav-link").forEach((item) => item.classList.remove("active"));
+          link.classList.add("active");
+          const panelId = link.dataset.panel;
+          document.querySelectorAll(".panel").forEach((panel) => panel.classList.remove("active"));
+          document.getElementById(panelId).classList.add("active");
+          if (panelId === "lab") renderAqrsBars();
+        });
+      });
+    }
+
+    function initFilters() {
+      document.querySelectorAll(".filter-buttons button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".filter-buttons button").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          state.filter = btn.dataset.filter;
+          renderHistory();
+        });
+      });
+      elements.searchInput.addEventListener("input", (event) => {
+        state.search = event.target.value;
+        renderHistory();
+      });
+      document.querySelectorAll("th.sortable").forEach((th) => {
+        th.addEventListener("click", () => {
+          const key = th.dataset.sort;
+          state.sort = {
+            key,
+            direction: state.sort.direction === "asc" ? "desc" : "asc",
+          };
+          renderHistory();
+        });
+      });
+    }
+
+    function initModal() {
+      elements.historyTable.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-tx]");
+        if (!button) return;
+        const txId = button.dataset.tx;
+        const tx = state.transactions.find((item) => item.transaction_id === txId);
+        updateModal(tx);
+        elements.modal.classList.add("active");
+      });
+      document.getElementById("close-modal").addEventListener("click", () => {
+        elements.modal.classList.remove("active");
+      });
+      elements.modal.addEventListener("click", (event) => {
+        if (event.target === elements.modal) elements.modal.classList.remove("active");
+      });
+    }
+
+    function initDilithiumToggle() {
+      const sizes = {
+        2: { key: "Level 2 ≈ 1312 bytes", sig: "~2420 bytes" },
+        3: { key: "Level 3 ≈ 1952 bytes", sig: "~3293 bytes" },
+        5: { key: "Level 5 ≈ 2592 bytes", sig: "~4595 bytes" },
+      };
+      document.querySelectorAll("input[name=dil-toggle]").forEach((radio) => {
+        radio.addEventListener("change", () => {
+          const level = radio.value;
+          elements.dilKey.textContent = sizes[level].key;
+          elements.dilSig.textContent = sizes[level].sig;
+        });
+      });
+    }
+
+    function initThreatDemo() {
+      document.getElementById("launch-ecdsa").addEventListener("click", () => {
+        const progress = document.getElementById("ecdsa-progress");
+        const result = document.getElementById("ecdsa-result");
+        const card = document.getElementById("attack-ecdsa");
+        progress.style.width = "0%";
+        card.classList.remove("compromised");
+        result.textContent = "";
+        setTimeout(() => {
+          progress.style.width = "100%";
+        }, 60);
+        setTimeout(() => {
+          result.textContent = "⚠ PRIVATE KEY RECOVERED — Transaction COMPROMISED.";
+          result.style.color = "var(--danger)";
+          card.classList.add("compromised");
+        }, 3200);
+      });
+
+      document.getElementById("launch-dil").addEventListener("click", () => {
+        const progress = document.getElementById("dil-progress");
+        const result = document.getElementById("dil-result");
+        const card = document.getElementById("attack-dil");
+        progress.style.width = "0%";
+        card.classList.remove("safe");
+        result.textContent = "";
+        setTimeout(() => {
+          progress.style.width = "15%";
+        }, 60);
+        setTimeout(() => {
+          result.textContent = "✗ ATTACK FAILED — Dilithium resists Shor's Algorithm. Quantum attack resistance: CONFIRMED.";
+          result.style.color = "var(--success)";
+          card.classList.add("safe");
+        }, 1400);
+      });
+    }
+
+    function initForm() {
+      const updatePreview = () => {
+        const preview = updateRiskDisplay(elements.amountInput.value || 0);
+        renderDecisionEngine(preview);
+        elements.submitBtn.disabled = !(preview.amount > 0);
+      };
+      updatePreview();
+      elements.amountInput.addEventListener("input", updatePreview);
+      elements.senderInput.addEventListener("input", updatePreview);
+      elements.receiverInput.addEventListener("input", updatePreview);
+      elements.submitBtn.addEventListener("click", submitTransaction);
+    }
+
+    function initSignatureInspector() {
+      document.getElementById("sign-ecdsa").addEventListener("click", () => signMessage("ecdsa"));
+      document.getElementById("sign-dil").addEventListener("click", () => signMessage("dilithium"));
+      document.getElementById("verify-signature").addEventListener("click", verifyMessage);
+    }
+
+    function seedFakeData() {
+      state.transactions = fakeTransactions.map((tx, index) => ({
+        ...tx,
+        transaction_id: `TX00${index + 1}`,
+      }));
+      state.blocks = [
+        {
+          block_number: 1,
+          transaction_count: 2,
+          hash: "ab4f1c".padEnd(64, "7"),
+          timestamp: new Date().toISOString(),
+        },
+      ];
+      updateStats();
+      renderBlocks();
+      renderFeed();
+      renderHistory();
+    }
+
+    function init() {
+      seedFakeData();
+      renderSigningChart();
+      animateSafetyScore();
+      initNavigation();
+      initFilters();
+      initModal();
+      initDilithiumToggle();
+      initThreatDemo();
+      initForm();
+      initSignatureInspector();
+    }
+
+    init();
+  </script>
+</body>
+</html>
