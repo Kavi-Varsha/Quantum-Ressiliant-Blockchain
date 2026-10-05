@@ -1,127 +1,137 @@
-# Quantum AQRS Blockchain Simulation
+# PQBank
 
-This repository demonstrates an Adaptive Quantum-Readiness Scoring (AQRS) blockchain workflow. It compares classical ECDSA against post-quantum Dilithium signatures, measures signing and verification overhead, builds a simple blockchain of signed transactions, and produces results, charts, and API responses for inspection.
+Adaptive Post-Quantum Secure Banking Using Blockchain and AQRS.
 
-## What the project does
+## Problem Statement
 
-The codebase has two main execution paths:
+This project addresses the research question: how can adaptive post-quantum cryptographic security be applied to blockchain-based financial transactions while balancing security and computational/storage overhead?
 
-1. Offline simulation via `main.py`, which generates transactions, runs every signing mode, computes AQRS scores, saves `results.json`, and writes plots into `plots/`.
-2. Interactive Flask app via `app.py`, which exposes API endpoints for signing, verifying, and inspecting transactions and blocks in real time.
+The current repository is a working prototype focused on research validation and benchmarking. It compares classical ECDSA with post-quantum Dilithium signatures, adapts the signature strength to transaction risk via AQRS, and evaluates the resulting blockchain performance.
 
-## Workflow Overview
+## Research Contribution
 
-The end-to-end simulation follows this sequence:
+The central research contribution is the Adaptive Quantum-Readiness Scoring (AQRS) layer. It maps transaction risk to a suitable Post-Quantum security level:
 
-1. Generate transactions with randomized sender, receiver, amount, timestamp, and risk level.
-2. Classify each transaction as `LOW`, `MEDIUM`, or `HIGH` risk based on amount.
-3. Run the transaction set through five modes:
-   - `ECDSA`
-   - `DIL2`
-   - `DIL3`
-   - `DIL5`
-   - `AQRS`
-4. Sign and verify each transaction in the selected mode.
-5. Add signed transactions to the blockchain and mine blocks when a block fills up.
-6. Aggregate timing, signature-size, throughput, and chain-size metrics.
-7. Compute AQRS scores relative to the ECDSA baseline.
-8. Persist results to `results.json` and generate plots under `plots/`.
+- LOW -> Dilithium Level 2
+- MEDIUM -> Dilithium Level 3
+- HIGH -> Dilithium Level 5
 
-## How the modules fit together
+The project measures the trade-off between stronger cryptographic protection and increased signing time, verification time, signature size, and blockchain footprint.
 
-- `main.py` orchestrates the full offline run.
-- `transaction_generator.py` creates synthetic transactions and assigns risk levels.
-- `signature_engine.py` wraps ECDSA and Dilithium key generation, signing, verification, and AQRS risk-based selection.
-- `blockchain.py` maintains the blockchain and auto-mines blocks when the pending pool reaches the configured size.
-- `simulation.py` runs the full benchmark for one mode and returns structured metrics.
-- `aqrs_calculator.py` computes AQRS scores for each mode.
-- `visualizer.py` creates the comparison charts and summary table.
-- `app.py` provides the web/API version of the workflow.
+## CURRENTLY IMPLEMENTED
 
-## Offline Simulation Flow
+- Transaction generation with risk classification
+- ECDSA signing and verification
+- Dilithium Level 2, Level 3, and Level 5 signing and verification
+- AQRS-based security-level selection
+- Simple blockchain chaining with block creation and chain-size metrics
+- Offline simulation for ECDSA, DIL2, DIL3, DIL5, and AQRS modes
+- Plot generation for timing, size, throughput, and AQRS comparison
+- Flask-based prototype API for transaction and signature experimentation
 
-`main.py` is the best entry point when you want a repeatable benchmark run:
+## PLANNED
 
-1. It generates 100 transactions.
-2. It runs all five modes over the same transaction set.
-3. It calculates AQRS scores.
-4. It saves a structured `results.json` file.
-5. It generates plots in `plots/` and prints a summary table.
+- Banking user and account model
+- Authentication and authorization
+- Persistent database layer
+- REST API design for real banking workflows
+- Modular service architecture
+- Frontend pages for customer and admin/researcher flows
+- Long-term production-grade blockchain integration
+- Audit, tamper detection, and analytics services
 
-The generated `results.json` file includes:
+## Existing Architecture
 
-- per-mode totals and averages,
-- per-transaction records,
-- chain size and throughput metrics,
-- computed AQRS scores.
+The current prototype is a single-layer research implementation with responsibilities concentrated in a few modules:
 
-## Web App / API Flow
+- `main.py` orchestrates the benchmark pipeline
+- `transaction_generator.py` creates synthetic transactions and risk labels
+- `signature_engine.py` wraps ECDSA and Dilithium operations
+- `blockchain.py` maintains the chain and pending transactions
+- `simulation.py` runs one benchmark mode and aggregates metrics
+- `aqrs_calculator.py` calculates AQRS scores
+- `visualizer.py` generates plots and summary output
+- `app.py` exposes a Flask API that mixes transaction processing, signing, verification, and blockchain logic in one place
 
-`app.py` exposes a Flask service for interactive testing:
+## Target Architecture
 
-- `GET /` serves the front-end `index.html`.
-- `POST /api/transaction` creates a signed transaction, verifies it, appends it to the in-memory transaction list, and adds blocks every 5 transactions.
-- `POST /api/sign-message` signs an arbitrary message.
-- `POST /api/verify-message` verifies a signature for a message.
-- `GET /api/transactions` returns all stored transactions.
-- `GET /api/blocks` returns the current block list.
-- `GET /api/stats` returns aggregate counts and average signing times.
+The final architecture will separate the system into the following layers:
 
-The API version keeps state in memory, so it is best for demos and local experimentation rather than production use.
+1. Presentation Layer
+2. API Layer
+3. Service Layer
+4. Domain/Core Layer
+5. Persistence Layer
+6. Research Layer
 
-## AQRS logic
+The project is intentionally planned to evolve into:
 
-AQRS is the adaptive part of the system:
+- a banking application for real transactions and user flows
+- a research lab for benchmarking and simulation
+- a shared core for AQRS, cryptography, and blockchain logic
 
-- `LOW` risk transactions map to Dilithium level 2.
-- `MEDIUM` risk transactions map to Dilithium level 3.
-- `HIGH` risk transactions map to Dilithium level 5.
+## Technology Stack
 
-The AQRS score rewards stronger security while penalizing signing, verification, and signature-size overhead relative to the ECDSA baseline.
+- Python 3
+- Flask
+- cryptography
+- dilithium-py
+- matplotlib
+- pandas
+- JSON-based research artifacts
 
-## Requirements
+## How to Run the Current Research Simulation
 
-Install the dependencies listed in `aqrs_blockchain/requirements.txt`:
-
-- `cryptography`
-- `dilithium-py`
-- `matplotlib`
-- `pandas`
-- `flask`
-- `flask-cors`
-
-## Setup and Run
-
-From the repository root:
+From the project root:
 
 ```bash
-cd Quantum/aqrs_blockchain
 pip install -r requirements.txt
-```
-
-Run the offline benchmark:
-
-```bash
 python main.py
 ```
 
-Run the Flask app:
+This generates:
+
+- `results.json`
+- `plots/*.png`
+- console metrics and AQRS summary
+
+To run the prototype Flask API:
 
 ```bash
 python app.py
 ```
 
-Then open the local server at `http://127.0.0.1:5000`.
+Then open the local endpoint at `http://127.0.0.1:5000`.
 
-## Generated outputs
+## Future Development Roadmap
 
-After a simulation run, the following artifacts are created or updated:
+### Module 0
+- Audit the research prototype
+- Define target architecture
+- Establish repository structure
+- Preserve research engine
+- Record baseline metrics
 
-- `results.json` for structured benchmark results.
-- `plots/` for individual and combined charts.
-- Console output with the summary table and AQRS scores.
+### Module 1
+- Database design and entity modeling
+- Repository and persistence layer design
+- Data model for users, accounts, transactions, signatures, AQRS decisions, blocks, and audit logs
 
-## Notes for GitHub
+### Module 2
+- Banking core service layer
+- Risk engine and AQRS service
+- Crypto service abstraction
+- Blockchain service abstraction
 
-- This repository contains a nested package directory, so the runnable application code lives under `Quantum/aqrs_blockchain/`.
-- If you want GitHub visitors to understand the project quickly, keep this README at the repository root and treat it as the main entry point.
+### Module 3
+- REST API layer and route groups
+- Transaction and account workflows
+- Research endpoints
+
+### Module 4
+- Frontend pages and dashboard flows
+- Research lab UI and experiment monitoring
+
+## Important Note
+
+This repository must preserve the research engine as a separate concern from the future banking application. The research layer remains essential to the project’s academic and engineering contribution.
