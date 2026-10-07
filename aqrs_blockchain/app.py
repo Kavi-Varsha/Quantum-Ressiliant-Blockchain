@@ -11,7 +11,7 @@ from functools import wraps
 from hashlib import sha256
 from typing import Any, Dict, List
 
-from flask import Flask, g, jsonify, request, send_from_directory, session
+from flask import Flask, abort, g, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from flask_cors import CORS
 from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -30,7 +30,7 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 from backend.database.database import SessionLocal, create_tables
-from backend.models.account import Account
+from backend.models.account import Account, AccountStatus, AccountType
 from backend.models.aqrs_decision import AQRSDecision
 from backend.models.audit_log import AuditLog
 from backend.models.transaction import Transaction, TransactionStatus
@@ -42,12 +42,19 @@ from backend.services import (
     InsufficientBalanceError,
     TransactionService,
     ValidationError,
+    add_transaction_to_ledger,
     build_decision_for_amount,
     classify_transaction_risk,
     select_security_level,
 )
 
 create_tables()
+
+with SessionLocal() as _startup_db:
+    from backend.services.blockchain_service import ensure_genesis_block
+
+    ensure_genesis_block(_startup_db)
+    _startup_db.commit()
 
 
 TRANSACTIONS: List[Dict[str, Any]] = []
@@ -118,6 +125,53 @@ def maybe_add_block() -> int | None:
 
 @app.get("/")
 def index() -> Any:
+    return render_template("login.html", page="login")
+
+
+@app.get("/login")
+def login_page() -> Any:
+    return render_template("login.html", page="login")
+
+
+@app.get("/register")
+def register_page() -> Any:
+    return render_template("register.html", page="register")
+
+
+@app.get("/dashboard")
+def dashboard_page() -> Any:
+    if _current_user_from_session() is None:
+        return redirect(url_for("login_page"))
+    return render_template("dashboard.html", page="dashboard")
+
+
+@app.get("/transfer")
+def transfer_page() -> Any:
+    if _current_user_from_session() is None:
+        return redirect(url_for("login_page"))
+    return render_template("transfer.html", page="transfer")
+
+
+@app.get("/transactions")
+def transactions_page() -> Any:
+    if _current_user_from_session() is None:
+        return redirect(url_for("login_page"))
+    return render_template("transactions.html", page="transactions")
+
+
+@app.get("/transaction/<transaction_id>")
+def transaction_details_page(transaction_id: str) -> Any:
+    user = _current_user_from_session()
+    if user is None:
+        return redirect(url_for("login_page"))
+    with SessionLocal() as db:
+        if TransactionService.get_transaction_for_user(db, user.id, transaction_id) is None:
+            abort(404)
+    return render_template("transaction_details.html", page="transaction-details", transaction_id=transaction_id)
+
+
+@app.get("/research")
+def research_page() -> Any:
     return send_from_directory(".", "index.html")
 
 
@@ -520,6 +574,10 @@ def create_transaction() -> Any:
 
             try:
                 signature_result = CryptoSignatureService.sign_transaction(db, txn.id)
+                verification_result = CryptoSignatureService.verify_transaction_signature(db, txn.id)
+                if not verification_result["valid"]:
+                    raise ValueError("Transaction signature verification failed.")
+                ledger_block = add_transaction_to_ledger(db, txn.id, user_id=user.id)
             except Exception as exc:
                 db.rollback()
                 _log_audit_event(user.id, "CRYPTO_SIGNATURE_FAILED", "failure", str(exc), metadata={"transaction_id": txn.transaction_id, "algorithm": decision.algorithm, "security_level": decision.security_level}, transaction_id=txn.id)
@@ -543,6 +601,8 @@ def create_transaction() -> Any:
                 "algorithm": decision.algorithm,
                 "signature_available": True,
                 "signature_size_bytes": signature_result.get("signature_size_bytes", 0),
+                "block_number": ledger_block.block_number,
+                "block_hash": ledger_block.block_hash,
                 "created_at": txn.created_at.isoformat() if txn.created_at else None,
             }
             _log_audit_event(user.id, "TRANSACTION_CREATED", "success", "Transfer completed successfully", metadata={"transaction_id": txn.id, "sender_account_id": sender.id, "receiver_account_id": receiver.id, "amount": str(amount), "risk_level": risk.value, "security_level": decision.security_level}, transaction_id=txn.id)
@@ -677,6 +737,85 @@ def verify_transaction_endpoint(transaction_id: str) -> Any:
         })
 
 
+def _serialize_block(block) -> Dict[str, Any]:
+    return {
+        "id": block.id,
+        "block_index": block.block_number,
+        "timestamp": block.timestamp.isoformat() if block.timestamp else None,
+        "previous_hash": block.previous_hash,
+        "block_hash": block.block_hash,
+        "transaction_count": block.transaction_count,
+        "block_size_bytes": block.block_size_bytes,
+        "created_at": block.created_at.isoformat() if block.created_at else None,
+        "transactions": [
+            {
+                "id": transaction.id,
+                "transaction_id": transaction.transaction_id,
+                "signature_id": transaction.signature.id if transaction.signature else None,
+            }
+            for transaction in block.transactions
+        ],
+    }
+
+
+@app.get("/api/blockchain")
+@require_auth
+def get_blockchain() -> Any:
+    user = getattr(g, "current_user")
+    if user.role not in {UserRole.ADMIN, UserRole.SECURITY_ANALYST}:
+        return jsonify({"error": "Access denied."}), 403
+    from backend.services.blockchain_service import get_chain, validate_chain
+
+    with SessionLocal() as db:
+        return jsonify({"blocks": [_serialize_block(block) for block in get_chain(db)], "validation": validate_chain(db)})
+
+
+@app.get("/api/blockchain/validate")
+@require_auth
+def validate_blockchain() -> Any:
+    user = getattr(g, "current_user")
+    if user.role not in {UserRole.ADMIN, UserRole.SECURITY_ANALYST}:
+        return jsonify({"error": "Access denied."}), 403
+    from backend.services.blockchain_service import validate_chain
+
+    with SessionLocal() as db:
+        result = validate_chain(db)
+    return jsonify(result)
+
+
+@app.get("/api/blockchain/blocks/<int:block_number>")
+@require_auth
+def get_block_by_number(block_number: int) -> Any:
+    user = getattr(g, "current_user")
+    if user.role not in {UserRole.ADMIN, UserRole.SECURITY_ANALYST}:
+        return jsonify({"error": "Access denied."}), 403
+    from backend.services.blockchain_service import get_block, validate_block
+
+    with SessionLocal() as db:
+        block = get_block(db, block_number)
+        if block is None:
+            return jsonify({"error": "Block not found."}), 404
+        return jsonify({"block": _serialize_block(block), "validation": validate_block(db, block)})
+
+
+@app.get("/api/transactions/<transaction_id>/block")
+@require_auth
+def get_transaction_block(transaction_id: str) -> Any:
+    user = getattr(g, "current_user")
+    from backend.services.blockchain_service import get_transaction_block as find_transaction_block
+
+    with SessionLocal() as db:
+        txn = TransactionService.get_transaction_for_user(db, user.id, transaction_id)
+        if txn is None and user.role in {UserRole.ADMIN, UserRole.SECURITY_ANALYST}:
+            txn = TransactionService.get_transaction_by_identifier(db, transaction_id)
+        if txn is None:
+            return jsonify({"error": "Transaction not found or access denied."}), 404
+        block = find_transaction_block(db, txn.id)
+        if block is None:
+            return jsonify({"error": "Transaction is not included in the ledger."}), 404
+        return jsonify({"block": _serialize_block(block)})
+
+
 @app.get("/api/security/aqrs/decisions")
 @require_auth
 def get_all_aqrs_decisions():
@@ -756,10 +895,27 @@ def register_user():
             role=UserRole.CUSTOMER,
             is_active=True,
         )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        _log_audit_event(user.id, "registration_success", "success", "User registered successfully", metadata={"username": username, "role": user.role.value})
+        try:
+            db.add(user)
+            db.flush()
+
+            account_number = f"INR-{uuid.uuid4().hex[:12].upper()}"
+            account = Account(
+                user_id=user.id,
+                account_number=account_number,
+                account_type=AccountType.SAVINGS,
+                balance=Decimal("10000.00"),
+                currency="INR",
+                status=AccountStatus.ACTIVE,
+            )
+            db.add(account)
+            db.commit()
+            db.refresh(user)
+        except Exception:
+            db.rollback()
+            return jsonify({"error": "Registration could not be completed."}), 500
+
+        _log_audit_event(user.id, "registration_success", "success", "User registered successfully", metadata={"username": username, "role": user.role.value, "account_number": account.account_number})
         return jsonify({"message": "User registered successfully.", "user": _serialize_user(user)}), 201
 
 
@@ -836,7 +992,7 @@ def my_accounts():
     user = getattr(g, "current_user")
     with SessionLocal() as db:
         accounts = db.query(Account).filter_by(user_id=user.id).all()
-    return jsonify({"accounts": [{"id": acc.id, "account_number": acc.account_number, "balance": str(acc.balance), "currency": acc.currency, "status": acc.status.value if hasattr(acc.status, "value") else str(acc.status)} for acc in accounts]})
+    return jsonify({"accounts": [{"id": acc.id, "account_number": acc.account_number, "account_type": acc.account_type.value if hasattr(acc.account_type, "value") else str(acc.account_type), "balance": str(acc.balance), "currency": acc.currency, "status": acc.status.value if hasattr(acc.status, "value") else str(acc.status)} for acc in accounts]})
 
 
 @app.get("/api/accounts/<account_id>")

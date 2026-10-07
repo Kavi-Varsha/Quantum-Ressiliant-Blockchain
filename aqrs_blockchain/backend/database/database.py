@@ -9,17 +9,6 @@ from backend.config import DATABASE_ECHO, DATABASE_URL
 class Base(DeclarativeBase):
     pass
 
-# Import model modules so SQLAlchemy registers all mapped classes before schema creation.
-from backend.models.account import Account  # noqa: F401
-from backend.models.aqrs_decision import AQRSDecision  # noqa: F401
-from backend.models.audit_log import AuditLog  # noqa: F401
-from backend.models.block import Block  # noqa: F401
-from backend.models.experiment import Experiment, ExperimentResult  # noqa: F401
-from backend.models.signature import Signature  # noqa: F401
-from backend.models.transaction import RiskLevel, Transaction, TransactionStatus  # noqa: F401
-from backend.models.user import User, UserRole  # noqa: F401
-
-
 def _build_engine(url: str, echo: bool = False):
     return create_engine(url, echo=echo, future=True)
 
@@ -91,7 +80,5 @@ def create_tables() -> None:
     Base.metadata.create_all(bind=engine)
     _migrate_existing_sqlite_schema()
 
-
-create_tables()
 
 __all__ = ["Base", "DatabaseManager", "SessionLocal", "create_tables", "engine"]

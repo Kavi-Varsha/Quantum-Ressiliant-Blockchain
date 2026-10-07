@@ -221,6 +221,27 @@ python -m pytest -q
 
 This module is intentionally limited to the prototype stage. It does not claim production banking-grade security; it provides a safe and auditable auth foundation with hashed passwords, DB-backed roles, and ownership checks for the next development phases.
 
+## Module 6: Persistent Tamper-Evident Ledger
+
+Completed banking transactions are added to a persistent SQLAlchemy-backed ledger only after account validation, balance updates, AQRS decision persistence, ML-DSA signing, and signature verification succeed. The database remains the system of record; the ledger adds hash linkage and integrity validation through the `Block` model and `Transaction.block_id` relationship.
+
+The persistent ledger provides:
+
+- One deterministic genesis block at index `0` with a zero-hash previous reference.
+- SHA-256 block hashes over canonical block metadata and normalized transaction/signature references.
+- Previous-block hash linkage and transaction-to-block association.
+- Block and full-chain validation, including detection of block, transaction, signature-reference, and linkage changes.
+- `BLOCK_CREATED` audit events for ledger inclusion.
+
+Explorer endpoints are restricted to `ADMIN` and `SECURITY_ANALYST` roles:
+
+- `GET /api/blockchain`
+- `GET /api/blockchain/validate`
+- `GET /api/blockchain/blocks/<block_number>`
+- `GET /api/transactions/<transaction_id>/block` for an authorized transaction owner or privileged role
+
+This is an academic persistent tamper-evident ledger for the banking prototype. It is not a decentralized, permissionless, mining-based, cryptocurrency, consensus, or Byzantine-fault-tolerant blockchain. The original in-memory research implementation in `blockchain.py` remains independently executable and unchanged.
+
 ## How to Run the Current Research Simulation
 
 From the project root:

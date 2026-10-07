@@ -28,5 +28,9 @@ class Block(Base):
 
     transactions: Mapped[list["Transaction"]] = relationship(back_populates="block")
 
+    @property
+    def block_index(self) -> int:
+        return self.block_number
+
     def __repr__(self) -> str:
         return f"Block(id={self.id}, block_number={self.block_number}, hash={self.block_hash})"
