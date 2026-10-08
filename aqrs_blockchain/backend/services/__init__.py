@@ -1,4 +1,16 @@
 from backend.services.account_service import AccountService
+from backend.services.analytics_service import (
+    get_admin_overview,
+    get_audit_logs,
+    get_aqrs_analytics,
+    get_algorithm_usage,
+    get_blockchain_analytics,
+    get_risk_distribution,
+    get_security_overview,
+    get_signature_statistics,
+    get_transactions,
+    get_users,
+)
 from backend.services.blockchain_service import (
     add_transaction_to_ledger,
     calculate_block_hash,
@@ -22,6 +34,14 @@ from backend.services.risk_service import (
     classify_transaction_risk,
     select_security_level,
 )
+from backend.services.research_service import (
+    RESEARCH_MODES,
+    get_experiment,
+    get_latest_experiment,
+    list_experiments,
+    run_experiment,
+    serialize_experiment,
+)
 from backend.services.transaction_service import (
     AuthorizationError,
     InsufficientBalanceError,
@@ -31,6 +51,16 @@ from backend.services.transaction_service import (
 
 __all__ = [
     "AccountService",
+    "get_admin_overview",
+    "get_audit_logs",
+    "get_aqrs_analytics",
+    "get_algorithm_usage",
+    "get_blockchain_analytics",
+    "get_risk_distribution",
+    "get_security_overview",
+    "get_signature_statistics",
+    "get_transactions",
+    "get_users",
     "add_transaction_to_ledger",
     "calculate_block_hash",
     "ensure_genesis_block",
@@ -52,4 +82,10 @@ __all__ = [
     "classify_transaction_risk",
     "select_security_level",
     "build_decision_for_amount",
+    "RESEARCH_MODES",
+    "get_experiment",
+    "get_latest_experiment",
+    "list_experiments",
+    "run_experiment",
+    "serialize_experiment",
 ]

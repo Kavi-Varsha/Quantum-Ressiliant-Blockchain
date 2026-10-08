@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 import json
 import os
 import re
@@ -45,6 +47,21 @@ from backend.services import (
     add_transaction_to_ledger,
     build_decision_for_amount,
     classify_transaction_risk,
+    get_admin_overview,
+    get_audit_logs,
+    get_aqrs_analytics,
+    get_algorithm_usage,
+    get_blockchain_analytics,
+    get_security_overview,
+    get_signature_statistics,
+    get_transactions,
+    get_users,
+    RESEARCH_MODES,
+    get_experiment,
+    get_latest_experiment,
+    list_experiments,
+    run_experiment,
+    serialize_experiment,
     select_security_level,
 )
 
@@ -172,7 +189,77 @@ def transaction_details_page(transaction_id: str) -> Any:
 
 @app.get("/research")
 def research_page() -> Any:
-    return send_from_directory(".", "index.html")
+    denied = _role_page(UserRole.ADMIN, UserRole.SECURITY_ANALYST)
+    return denied or render_template("research.html", page="research", console="RESEARCH LAB")
+
+
+@app.get("/research/legacy")
+def legacy_research_page() -> Any:
+    denied = _role_page(UserRole.ADMIN, UserRole.SECURITY_ANALYST)
+    return denied or send_from_directory(".", "index.html")
+
+
+def _role_page(*roles: UserRole):
+    user = _current_user_from_session()
+    if user is None:
+        return redirect(url_for("login_page"))
+    if user.role not in roles:
+        abort(403)
+    return None
+
+
+@app.get("/admin")
+def admin_page() -> Any:
+    denied = _role_page(UserRole.ADMIN)
+    return denied or render_template("admin.html", page="admin", console="ADMIN CONSOLE")
+
+
+@app.get("/admin/users")
+def admin_users_page() -> Any:
+    denied = _role_page(UserRole.ADMIN)
+    return denied or render_template("admin_users.html", page="admin-users", console="ADMIN CONSOLE")
+
+
+@app.get("/admin/transactions")
+def admin_transactions_page() -> Any:
+    denied = _role_page(UserRole.ADMIN)
+    return denied or render_template("admin_transactions.html", page="admin-transactions", console="ADMIN CONSOLE")
+
+
+@app.get("/admin/audit")
+def admin_audit_page() -> Any:
+    denied = _role_page(UserRole.ADMIN)
+    return denied or render_template("admin_audit.html", page="admin-audit", console="ADMIN CONSOLE")
+
+
+@app.get("/security")
+def security_page() -> Any:
+    denied = _role_page(UserRole.ADMIN, UserRole.SECURITY_ANALYST)
+    return denied or render_template("security.html", page="security", console="SECURITY OPERATIONS")
+
+
+@app.get("/security/aqrs")
+def security_aqrs_page() -> Any:
+    denied = _role_page(UserRole.ADMIN, UserRole.SECURITY_ANALYST)
+    return denied or render_template("security_aqrs.html", page="security-aqrs", console="SECURITY OPERATIONS")
+
+
+@app.get("/security/blockchain")
+def security_blockchain_page() -> Any:
+    denied = _role_page(UserRole.ADMIN, UserRole.SECURITY_ANALYST)
+    return denied or render_template("security_blockchain.html", page="security-blockchain", console="SECURITY OPERATIONS")
+
+
+@app.get("/security/crypto")
+def security_crypto_page() -> Any:
+    denied = _role_page(UserRole.ADMIN, UserRole.SECURITY_ANALYST)
+    return denied or render_template("security_crypto.html", page="security-crypto", console="SECURITY OPERATIONS")
+
+
+@app.get("/security/audit")
+def security_audit_page() -> Any:
+    denied = _role_page(UserRole.ADMIN, UserRole.SECURITY_ANALYST)
+    return denied or render_template("security_audit.html", page="security-audit", console="SECURITY OPERATIONS")
 
 
 @app.post("/api/transaction")
@@ -855,6 +942,169 @@ def get_all_aqrs_decisions():
 @app.get("/api/blocks")
 def api_blocks() -> Any:
     return jsonify(BLOCKS)
+
+
+@app.get("/api/admin/overview")
+@require_auth
+@require_role(UserRole.ADMIN.value)
+def admin_overview_api() -> Any:
+    with SessionLocal() as db:
+        return jsonify(get_admin_overview(db))
+
+
+@app.get("/api/admin/users")
+@require_auth
+@require_role(UserRole.ADMIN.value)
+def admin_users_api() -> Any:
+    with SessionLocal() as db:
+        return jsonify({"users": get_users(db)})
+
+
+@app.get("/api/admin/transactions")
+@require_auth
+@require_role(UserRole.ADMIN.value)
+def admin_transactions_api() -> Any:
+    with SessionLocal() as db:
+        return jsonify({"transactions": get_transactions(db)})
+
+
+@app.get("/api/admin/audit")
+@require_auth
+@require_role(UserRole.ADMIN.value)
+def admin_audit_api() -> Any:
+    with SessionLocal() as db:
+        return jsonify({"events": get_audit_logs(db)})
+
+
+@app.get("/api/security/overview")
+@require_auth
+@require_role(UserRole.ADMIN.value, UserRole.SECURITY_ANALYST.value)
+def security_overview_api() -> Any:
+    with SessionLocal() as db:
+        return jsonify(get_security_overview(db))
+
+
+@app.get("/api/security/aqrs")
+@require_auth
+@require_role(UserRole.ADMIN.value, UserRole.SECURITY_ANALYST.value)
+def security_aqrs_api() -> Any:
+    with SessionLocal() as db:
+        return jsonify(get_aqrs_analytics(db))
+
+
+@app.get("/api/security/crypto")
+@require_auth
+@require_role(UserRole.ADMIN.value, UserRole.SECURITY_ANALYST.value)
+def security_crypto_api() -> Any:
+    with SessionLocal() as db:
+        return jsonify({"algorithms": get_algorithm_usage(db), "signatures": get_signature_statistics(db)})
+
+
+@app.get("/api/security/blockchain")
+@require_auth
+@require_role(UserRole.ADMIN.value, UserRole.SECURITY_ANALYST.value)
+def security_blockchain_api() -> Any:
+    with SessionLocal() as db:
+        return jsonify(get_blockchain_analytics(db))
+
+
+@app.get("/api/security/audit")
+@require_auth
+@require_role(UserRole.ADMIN.value, UserRole.SECURITY_ANALYST.value)
+def security_audit_api() -> Any:
+    with SessionLocal() as db:
+        return jsonify({"events": get_audit_logs(db, security_only=True)})
+
+
+@app.get("/api/research/experiments")
+@require_auth
+@require_role(UserRole.ADMIN.value, UserRole.SECURITY_ANALYST.value)
+def research_experiments_api() -> Any:
+    with SessionLocal() as db:
+        return jsonify({"experiments": [serialize_experiment(experiment) for experiment in list_experiments(db)], "modes": list(RESEARCH_MODES)})
+
+
+@app.get("/api/research/experiments/<experiment_id>")
+@require_auth
+@require_role(UserRole.ADMIN.value, UserRole.SECURITY_ANALYST.value)
+def research_experiment_api(experiment_id: str) -> Any:
+    with SessionLocal() as db:
+        experiment = get_experiment(db, experiment_id)
+        if experiment is None:
+            return jsonify({"error": "Experiment not found."}), 404
+        return jsonify({"experiment": serialize_experiment(experiment)})
+
+
+@app.post("/api/research/experiments")
+@require_auth
+@require_role(UserRole.ADMIN.value, UserRole.SECURITY_ANALYST.value)
+def create_research_experiment_api() -> Any:
+    payload = request.get_json(silent=True) or {}
+    try:
+        transaction_count = int(payload.get("transaction_count", 100))
+        seed = payload.get("seed")
+        seed = int(seed) if seed not in (None, "") else None
+        modes = payload.get("modes")
+        if modes is not None and not isinstance(modes, list):
+            raise ValueError("modes must be a list.")
+        with SessionLocal() as db:
+            experiment = run_experiment(db, transaction_count=transaction_count, seed=seed, modes=modes)
+            return jsonify({"experiment": serialize_experiment(experiment)}), 201
+    except (TypeError, ValueError) as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception:
+        return jsonify({"error": "The research experiment failed."}), 500
+
+
+@app.get("/api/research/results")
+@require_auth
+@require_role(UserRole.ADMIN.value, UserRole.SECURITY_ANALYST.value)
+def research_results_api() -> Any:
+    with SessionLocal() as db:
+        experiment = get_latest_experiment(db)
+        if experiment is None:
+            return jsonify({"error": "No completed research experiment is available."}), 404
+        return jsonify({"experiment": serialize_experiment(experiment)})
+
+
+@app.get("/api/research/compare")
+@require_auth
+@require_role(UserRole.ADMIN.value, UserRole.SECURITY_ANALYST.value)
+def research_compare_api() -> Any:
+    with SessionLocal() as db:
+        experiment = get_latest_experiment(db)
+        if experiment is None:
+            return jsonify({"error": "No completed research experiment is available."}), 404
+        return jsonify({"experiment_id": experiment.id, "experiment_name": experiment.experiment_name, "modes": list(RESEARCH_MODES), "results": [
+            {
+                "mode": result.mode,
+                "average_signing_time_ms": result.average_signing_time_ms,
+                "average_verification_time_ms": result.average_verification_time_ms,
+                "average_signature_size_bytes": result.average_signature_size_bytes,
+                "throughput_tps": result.throughput_tps,
+                "blockchain_size_bytes": result.blockchain_size_bytes,
+                "aqrs_score": result.aqrs_score,
+            }
+            for result in sorted(experiment.results, key=lambda item: RESEARCH_MODES.index(item.mode))
+        ]})
+
+
+@app.get("/api/research/experiments/<experiment_id>/export.csv")
+@require_auth
+@require_role(UserRole.ADMIN.value, UserRole.SECURITY_ANALYST.value)
+def export_research_csv(experiment_id: str) -> Any:
+    with SessionLocal() as db:
+        experiment = get_experiment(db, experiment_id)
+        if experiment is None:
+            return jsonify({"error": "Experiment not found."}), 404
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=["mode", "average_signing_time_ms", "average_verification_time_ms", "average_signature_size_bytes", "throughput_tps", "blockchain_size_bytes", "aqrs_score"])
+        writer.writeheader()
+        for result in experiment.results:
+            writer.writerow({field: getattr(result, field) for field in writer.fieldnames})
+        from flask import Response
+
+        return Response(output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": f"attachment; filename={experiment.experiment_name}.csv"})
 
 
 @app.post("/api/auth/register")

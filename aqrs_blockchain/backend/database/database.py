@@ -70,6 +70,12 @@ def _migrate_existing_sqlite_schema() -> None:
             if "verification_status" not in existing_columns:
                 with engine.begin() as conn:
                     conn.execute(text("ALTER TABLE signatures ADD COLUMN verification_status VARCHAR(20) NOT NULL DEFAULT 'UNVERIFIED'"))
+
+        if "experiments" in tables:
+            existing_columns = {column["name"] for column in inspector.get_columns("experiments")}
+            if "configuration" not in existing_columns:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE experiments ADD COLUMN configuration JSON NOT NULL DEFAULT '{}'"))
     except Exception:
         # SQLite and other DBs may require a different migration path, but the
         # app should continue to operate with the current schema if no migration is needed.
